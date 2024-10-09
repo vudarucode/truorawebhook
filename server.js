@@ -9,17 +9,31 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, "data.json");
 
-// Middleware para permitir CORS y parsear el body de las peticiones en JSON
+// Middleware para permitir CORS
 app.use(cors());
-app.use(express.json());
 
-// Ruta para recibir notificaciones vía webhook y almacenar en data.json
+// Middleware personalizado para manejar application/jwt
+app.use((req, res, next) => {
+  if (req.headers["content-type"] === "application/jwt") {
+    let data = "";
+    req.on("data", (chunk) => {
+      data += chunk;
+    });
+    req.on("end", () => {
+      req.body = data; // El JWT completo se almacena en req.body
+      next();
+    });
+  } else {
+    express.json()(req, res, next); // Para otras peticiones, seguimos usando JSON
+  }
+});
+
+// Ruta para recibir notificaciones vía webhook y almacenar el JWT decodificado
 app.post("/webhook", (req, res) => {
-  const { token } = req.body;
+  const token = req.body;
 
-  // Log para ver lo que llega en el cuerpo de la petición
-  console.log("Datos recibidos en la petición:", req);
-  // console.log("Datos recibidos en la petición:", req.body);
+  // Log para ver el JWT completo recibido
+  console.log("JWT recibido:", token);
 
   if (!token) {
     return res.status(400).json({ message: "Token no proporcionado" });
