@@ -18,7 +18,8 @@ app.post("/webhook", (req, res) => {
   const { token } = req.body;
 
   // Log para ver lo que llega en el cuerpo de la petición
-  console.log("Datos recibidos en la petición:", req.body);
+  console.log("Datos recibidos en la petición:", req);
+  // console.log("Datos recibidos en la petición:", req.body);
 
   if (!token) {
     return res.status(400).json({ message: "Token no proporcionado" });
