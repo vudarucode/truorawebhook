@@ -1,95 +1,75 @@
 const express = require("express");
-const cors = require("cors");
 const fs = require("fs");
-const path = require("path");
-const jwtDecode = require("jwt-decode");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
-
 const app = express();
-const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, "data.json");
 
-// Middleware para permitir CORS
-app.use(cors());
+// Clave secreta o clave pública para verificar el JWT desde variables de entorno
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// Middleware personalizado para manejar application/jwt
-app.use((req, res, next) => {
-  if (req.headers["content-type"] === "application/jwt") {
-    let data = "";
-    req.on("data", (chunk) => {
-      data += chunk;
-    });
-    req.on("end", () => {
-      req.body = data; // El JWT completo se almacena en req.body
-      next();
-    });
-  } else {
-    express.json()(req, res, next); // Para otras peticiones, seguimos usando JSON
-  }
-});
+if (!JWT_SECRET) {
+  console.error(
+    "Error: JWT_SECRET no está definido en las variables de entorno."
+  );
+  process.exit(1);
+}
 
-// Ruta para recibir notificaciones vía webhook y almacenar el JWT decodificado
+// Middleware para parsear cuerpos de tipo application/jwt como texto
+app.use(express.text({ type: "application/jwt" }));
+
+// Endpoint para recibir el webhook
 app.post("/webhook", (req, res) => {
-  const token = req.body;
-
-  // Log para ver el JWT completo recibido
-  console.log("JWT recibido:", token);
-
-  if (!token) {
-    return res.status(400).json({ message: "Token no proporcionado" });
-  }
-
   try {
-    // Decodificar el token JWT
-    const decodedToken = jwtDecode(token);
+    const jwtToken = req.body;
 
-    // Log para ver el token decodificado
-    console.log("Token decodificado:", decodedToken);
+    // Verificar y decodificar el token JWT
+    const decodedData = jwt.verify(jwtToken, JWT_SECRET);
 
-    // Leer el archivo actual
-    fs.readFile(DATA_FILE, "utf8", (err, data) => {
-      if (err) {
-        return res.status(500).json({ message: "Error al leer el archivo" });
-      }
-
-      // Convertir los datos en un array si el archivo no está vacío
-      let records = data ? JSON.parse(data) : [];
-
-      // Agregar el token decodificado al array de registros
-      records.push(decodedToken);
-
-      // Escribir el archivo con los nuevos datos
-      fs.writeFile(DATA_FILE, JSON.stringify(records, null, 2), (err) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ message: "Error al guardar el archivo" });
-        }
-        res
-          .status(200)
-          .json({ message: "Registro guardado correctamente", decodedToken });
-      });
-    });
-  } catch (err) {
-    return res
-      .status(400)
-      .json({ message: "Error al decodificar el token", error: err.message });
-  }
-});
-
-// Ruta para consultar los datos almacenados en data.json
-app.get("/records", (req, res) => {
-  fs.readFile(DATA_FILE, "utf8", (err, data) => {
-    if (err) {
-      return res.status(500).json({ message: "Error al leer el archivo" });
+    // Leer el archivo data.json si existe, de lo contrario inicializar un array vacío
+    let dataArray = [];
+    if (fs.existsSync("data.json")) {
+      const existingData = fs.readFileSync("data.json", "utf8");
+      dataArray = JSON.parse(existingData);
     }
 
-    const records = data ? JSON.parse(data) : [];
-    res.status(200).json(records);
-  });
+    // Agregar el nuevo registro al array
+    dataArray.push(decodedData);
+
+    // Escribir el array actualizado en data.json
+    fs.writeFileSync("data.json", JSON.stringify(dataArray, null, 2));
+
+    res.status(200).send("Datos recibidos y almacenados correctamente.");
+  } catch (error) {
+    console.error("Error al procesar el webhook:", error);
+
+    // Manejo de errores específicos de JWT
+    if (error.name === "JsonWebTokenError") {
+      res.status(401).send("Token JWT inválido.");
+    } else if (error.name === "TokenExpiredError") {
+      res.status(401).send("El token JWT ha expirado.");
+    } else {
+      res.status(500).send("Error en el servidor al procesar el webhook.");
+    }
+  }
 });
 
-// Iniciar el servidor
+// Endpoint para consultar todos los registros
+app.get("/records", (req, res) => {
+  try {
+    if (fs.existsSync("data.json")) {
+      const data = fs.readFileSync("data.json", "utf8");
+      const dataArray = JSON.parse(data);
+      res.status(200).json(dataArray);
+    } else {
+      res.status(200).json([]);
+    }
+  } catch (error) {
+    console.error("Error al leer los registros:", error);
+    res.status(500).send("Error en el servidor al leer los registros.");
+  }
+});
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
