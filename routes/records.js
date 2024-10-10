@@ -10,10 +10,22 @@ const dataFilePath = path.join(__dirname, "..", "data.json");
 router.get("/", (req, res) => {
   try {
     // Leer datos existentes
-    let data = { records: [] };
+    let data = {};
     if (fs.existsSync(dataFilePath)) {
       const fileData = fs.readFileSync(dataFilePath, "utf8");
-      data = JSON.parse(fileData);
+      if (fileData.trim()) {
+        try {
+          data = JSON.parse(fileData);
+        } catch (parseError) {
+          console.error("Error al parsear data.json:", parseError);
+          data = {};
+        }
+      }
+    }
+
+    // Asegurar que data.records sea un array
+    if (!Array.isArray(data.records)) {
+      data.records = [];
     }
 
     // Devolver los registros almacenados

@@ -27,11 +27,24 @@ router.post("/", (req, res) => {
     const decodedData = jwt.verify(jwtToken, JWT_SECRET);
 
     // Guardar los datos decodificados en data.json
-    let data = { records: [] };
+    let data = {};
     if (fs.existsSync(dataFilePath)) {
       const fileData = fs.readFileSync(dataFilePath, "utf8");
-      data = JSON.parse(fileData);
+      if (fileData.trim()) {
+        try {
+          data = JSON.parse(fileData);
+        } catch (parseError) {
+          console.error("Error al parsear data.json:", parseError);
+          data = {};
+        }
+      }
     }
+
+    // Asegurar que data.records sea un array
+    if (!Array.isArray(data.records)) {
+      data.records = [];
+    }
+
     data.records.push(decodedData);
     fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2));
 
@@ -40,10 +53,22 @@ router.post("/", (req, res) => {
 
     if (Array.isArray(events)) {
       // Leer datos de usuarios existentes
-      let userData = { users: [] };
+      let userData = {};
       if (fs.existsSync(userDataFilePath)) {
         const userFileData = fs.readFileSync(userDataFilePath, "utf8");
-        userData = JSON.parse(userFileData);
+        if (userFileData.trim()) {
+          try {
+            userData = JSON.parse(userFileData);
+          } catch (parseError) {
+            console.error("Error al parsear user_data.json:", parseError);
+            userData = {};
+          }
+        }
+      }
+
+      // Asegurar que userData.users sea un array
+      if (!Array.isArray(userData.users)) {
+        userData.users = [];
       }
 
       for (const event of events) {

@@ -23,10 +23,22 @@ router.post("/", (req, res) => {
     const timestamp = new Date().toISOString();
 
     // Leer datos existentes
-    let userData = { users: [] };
+    let userData = {};
     if (fs.existsSync(userDataFilePath)) {
       const fileData = fs.readFileSync(userDataFilePath, "utf8");
-      userData = JSON.parse(fileData);
+      if (fileData.trim()) {
+        try {
+          userData = JSON.parse(fileData);
+        } catch (parseError) {
+          console.error("Error al parsear user_data.json:", parseError);
+          userData = {};
+        }
+      }
+    }
+
+    // Asegurar que userData.users sea un array
+    if (!Array.isArray(userData.users)) {
+      userData.users = [];
     }
 
     // Crear nuevo objeto de usuario
@@ -58,10 +70,22 @@ router.post("/", (req, res) => {
 router.get("/", (req, res) => {
   try {
     // Leer datos existentes
-    let userData = { users: [] };
+    let userData = {};
     if (fs.existsSync(userDataFilePath)) {
       const fileData = fs.readFileSync(userDataFilePath, "utf8");
-      userData = JSON.parse(fileData);
+      if (fileData.trim()) {
+        try {
+          userData = JSON.parse(fileData);
+        } catch (parseError) {
+          console.error("Error al parsear user_data.json:", parseError);
+          userData = {};
+        }
+      }
+    }
+
+    // Asegurar que userData.users sea un array
+    if (!Array.isArray(userData.users)) {
+      userData.users = [];
     }
 
     // Devolver los usuarios almacenados
