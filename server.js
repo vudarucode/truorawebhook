@@ -69,6 +69,54 @@ app.get("/records", (req, res) => {
   }
 });
 
+// Endpoint para recibir datos de usuario y almacenarlos
+app.post("/user", (req, res) => {
+  try {
+    const userDataInput = req.body;
+
+    // Agregar timestamp del lado del servidor
+    userDataInput.timestamp = new Date().toISOString();
+
+    // Leer el archivo user_data.json si existe, de lo contrario inicializar un array vacío
+    let userDataArray = [];
+    if (fs.existsSync("user_data.json")) {
+      const existingUserData = fs.readFileSync("user_data.json", "utf8");
+      userDataArray = JSON.parse(existingUserData);
+    }
+
+    // Agregar el nuevo registro al array
+    userDataArray.push(userDataInput);
+
+    // Escribir el array actualizado en user_data.json
+    fs.writeFileSync("user_data.json", JSON.stringify(userDataArray, null, 2));
+
+    res
+      .status(200)
+      .send("Datos del usuario recibidos y almacenados correctamente.");
+  } catch (error) {
+    console.error("Error al procesar los datos del usuario:", error);
+    res
+      .status(500)
+      .send("Error en el servidor al procesar los datos del usuario.");
+  }
+});
+
+// Endpoint para consultar todos los datos de usuarios
+app.get("/user", (req, res) => {
+  try {
+    if (fs.existsSync("user_data.json")) {
+      const data = fs.readFileSync("user_data.json", "utf8");
+      const userDataArray = JSON.parse(data);
+      res.status(200).json(userDataArray);
+    } else {
+      res.status(200).json([]);
+    }
+  } catch (error) {
+    console.error("Error al leer los datos de usuarios:", error);
+    res.status(500).send("Error en el servidor al leer los datos de usuarios.");
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
