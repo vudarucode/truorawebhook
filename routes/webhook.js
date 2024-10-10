@@ -1,7 +1,10 @@
-const express = require("express");
-const jwt = require("jsonwebtoken");
+// routes/webhook.js
+import express from "express";
+import jwt from "jsonwebtoken";
+import { JSONFile } from "lowdb/node";
+import { Low } from "lowdb";
+
 const router = express.Router();
-const { JSONFile, Low } = require("lowdb");
 
 // Configurar lowdb para data.json
 const adapter = new JSONFile("data.json");
@@ -53,11 +56,9 @@ router.post("/", async (req, res) => {
         );
 
         if (userIndex !== -1) {
-          // Actualizar validation_status si es "success"
-          if (validation_status === "success") {
-            userDb.data.users[userIndex].validation_status = validation_status;
-            // Opcional: actualizar timestamp u otros campos si es necesario
-          }
+          // Actualizar validation_status
+          userDb.data.users[userIndex].validation_status = validation_status;
+          // Opcional: actualizar timestamp u otros campos si es necesario
         }
       }
 
@@ -79,4 +80,4 @@ router.post("/", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

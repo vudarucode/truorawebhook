@@ -1,6 +1,9 @@
-const express = require("express");
+// routes/user.js
+import express from "express";
+import { JSONFile } from "lowdb/node";
+import { Low } from "lowdb";
+
 const router = express.Router();
-const { JSONFile, Low } = require("lowdb");
 
 // Configurar lowdb para user_data.json
 const adapter = new JSONFile("user_data.json");
@@ -51,7 +54,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Nuevo endpoint para obtener los registros de usuarios (GET /user)
+// Endpoint para obtener los registros de usuarios (GET /user)
 router.get("/", async (req, res) => {
   try {
     // Leer datos existentes
@@ -68,4 +71,4 @@ router.get("/", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
