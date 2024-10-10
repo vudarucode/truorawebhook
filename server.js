@@ -53,21 +53,31 @@ app.post("/webhook", express.text({ type: "application/jwt" }), (req, res) => {
         }
       }
 
-      // Agregar nuevos registros para cada evento
       events.forEach((event) => {
         const identity_process_id = event.object.identity_process_id;
         const validation_status = event.object.validation_status;
 
-        // Crear un nuevo registro de usuario con los datos del evento
-        const newUserRecord = {
-          identity_process_id: identity_process_id,
-          validation_status: validation_status,
-          timestamp: new Date().toISOString(),
-          source: "webhook",
-        };
+        // Buscar el usuario con el identity_process_id
+        const existingUser = userDataArray.find(
+          (user) => user.identity_process_id === identity_process_id
+        );
 
-        // Agregar el nuevo registro al array de usuarios
-        userDataArray.push(newUserRecord);
+        if (existingUser) {
+          // Crear un nuevo registro copiando los datos del usuario existente
+          const newUserRecord = { ...existingUser };
+
+          // Actualizar validation_status y timestamp
+          newUserRecord.validation_status = validation_status;
+          newUserRecord.timestamp = new Date().toISOString();
+
+          // Agregar el nuevo registro al array de usuarios
+          userDataArray.push(newUserRecord);
+        } else {
+          // Si no se encuentra el usuario, opcionalmente podrías manejar este caso
+          console.warn(
+            `Usuario con identity_process_id ${identity_process_id} no encontrado.`
+          );
+        }
       });
 
       // Escribir el array actualizado en user_data.json
