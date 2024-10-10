@@ -29,7 +29,9 @@ app.post("/webhook", express.text({ type: "application/jwt" }), (req, res) => {
     let dataArray = [];
     if (fs.existsSync("data.json")) {
       const existingData = fs.readFileSync("data.json", "utf8");
-      dataArray = JSON.parse(existingData);
+      if (existingData.trim()) {
+        dataArray = JSON.parse(existingData);
+      }
     }
 
     // Agregar el nuevo registro al array
@@ -38,7 +40,43 @@ app.post("/webhook", express.text({ type: "application/jwt" }), (req, res) => {
     // Escribir el array actualizado en data.json
     fs.writeFileSync("data.json", JSON.stringify(dataArray, null, 2));
 
-    res.status(200).send("Datos recibidos y almacenados correctamente.");
+    // Procesar los eventos y actualizar el validation_status en user_data.json
+    const events = decodedData.events;
+
+    if (Array.isArray(events)) {
+      // Leer el archivo user_data.json si existe, de lo contrario inicializar un array vacío
+      let userDataArray = [];
+      if (fs.existsSync("user_data.json")) {
+        const existingUserData = fs.readFileSync("user_data.json", "utf8");
+        if (existingUserData.trim()) {
+          userDataArray = JSON.parse(existingUserData);
+        }
+      }
+
+      // Actualizar validation_status para cada evento
+      events.forEach((event) => {
+        const identity_process_id = event.object.identity_process_id;
+        const validation_status = event.object.validation_status;
+
+        // Buscar el usuario con el identity_process_id
+        const userIndex = userDataArray.findIndex(
+          (user) => user.identity_process_id === identity_process_id
+        );
+
+        if (userIndex !== -1) {
+          // Actualizar el validation_status del usuario
+          userDataArray[userIndex].validation_status = validation_status;
+        }
+      });
+
+      // Escribir el array actualizado en user_data.json
+      fs.writeFileSync(
+        "user_data.json",
+        JSON.stringify(userDataArray, null, 2)
+      );
+    }
+
+    res.status(200).send("Datos recibidos y procesados correctamente.");
   } catch (error) {
     console.error("Error al procesar el webhook:", error);
 
@@ -88,7 +126,9 @@ app.post("/user", (req, res) => {
     let userDataArray = [];
     if (fs.existsSync("user_data.json")) {
       const existingUserData = fs.readFileSync("user_data.json", "utf8");
-      userDataArray = JSON.parse(existingUserData);
+      if (existingUserData.trim()) {
+        userDataArray = JSON.parse(existingUserData);
+      }
     }
 
     // Agregar el nuevo registro al array
