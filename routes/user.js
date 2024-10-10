@@ -1,10 +1,9 @@
+// routes/user.js
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const router = express.Router();
 
-// Ruta del archivo user_data.json
-const userDataFilePath = path.join(__dirname, "..", "user_data.json");
+// Almacén de datos en memoria
+let userData = { users: [] };
 
 // Endpoint para recibir los datos del usuario (POST /user)
 router.post("/", (req, res) => {
@@ -22,25 +21,6 @@ router.post("/", (req, res) => {
     // Agregar timestamp del lado del servidor
     const timestamp = new Date().toISOString();
 
-    // Leer datos existentes
-    let userData = {};
-    if (fs.existsSync(userDataFilePath)) {
-      const fileData = fs.readFileSync(userDataFilePath, "utf8");
-      if (fileData.trim()) {
-        try {
-          userData = JSON.parse(fileData);
-        } catch (parseError) {
-          console.error("Error al parsear user_data.json:", parseError);
-          userData = {};
-        }
-      }
-    }
-
-    // Asegurar que userData.users sea un array
-    if (!Array.isArray(userData.users)) {
-      userData.users = [];
-    }
-
     // Crear nuevo objeto de usuario
     const newUser = {
       phone,
@@ -51,9 +31,6 @@ router.post("/", (req, res) => {
 
     // Agregar nuevo usuario
     userData.users.push(newUser);
-
-    // Guardar datos actualizados
-    fs.writeFileSync(userDataFilePath, JSON.stringify(userData, null, 2));
 
     res
       .status(200)
@@ -69,25 +46,6 @@ router.post("/", (req, res) => {
 // Endpoint para obtener los registros de usuarios (GET /user)
 router.get("/", (req, res) => {
   try {
-    // Leer datos existentes
-    let userData = {};
-    if (fs.existsSync(userDataFilePath)) {
-      const fileData = fs.readFileSync(userDataFilePath, "utf8");
-      if (fileData.trim()) {
-        try {
-          userData = JSON.parse(fileData);
-        } catch (parseError) {
-          console.error("Error al parsear user_data.json:", parseError);
-          userData = {};
-        }
-      }
-    }
-
-    // Asegurar que userData.users sea un array
-    if (!Array.isArray(userData.users)) {
-      userData.users = [];
-    }
-
     // Devolver los usuarios almacenados
     res.status(200).json(userData.users);
   } catch (error) {
