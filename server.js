@@ -14,11 +14,11 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-// Middleware para parsear cuerpos de tipo application/jwt como texto
-app.use(express.text({ type: "application/jwt" }));
+// Middlewares
+app.use(express.json()); // Para los endpoints que reciben JSON
 
 // Endpoint para recibir el webhook
-app.post("/webhook", (req, res) => {
+app.post("/webhook", express.text({ type: "application/jwt" }), (req, res) => {
   try {
     const jwtToken = req.body;
 
@@ -73,6 +73,13 @@ app.get("/records", (req, res) => {
 app.post("/user", (req, res) => {
   try {
     const userDataInput = req.body;
+
+    // Verificar que req.body contenga los datos esperados
+    if (typeof userDataInput !== "object" || userDataInput === null) {
+      return res
+        .status(400)
+        .send("El cuerpo de la solicitud debe ser un objeto JSON válido.");
+    }
 
     // Agregar timestamp del lado del servidor
     userDataInput.timestamp = new Date().toISOString();
