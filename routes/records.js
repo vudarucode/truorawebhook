@@ -6,10 +6,10 @@ const router = express.Router();
 // Ruta del archivo data.json
 const dataFilePath = path.join(__dirname, "..", "data.json");
 
-// Endpoint para obtener todos los registros
+// Endpoint para obtener todos los registros (GET /records)
 router.get("/", (req, res) => {
   try {
-    // Leer datos existentes
+    // Leer datos existentes de data.json
     let data = {};
     if (fs.existsSync(dataFilePath)) {
       const fileData = fs.readFileSync(dataFilePath, "utf8");

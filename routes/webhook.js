@@ -1,6 +1,7 @@
-// routes/webhook.js
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
 const router = express.Router();
 
 // Clave secreta para verificar el JWT
@@ -13,9 +14,8 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-// Almacén de datos en memoria
-let data = { records: [] };
-let userData = { users: [] }; // Importar o acceder al mismo objeto de userData en user.js si es posible
+// Ruta del archivo data.json
+const dataFilePath = path.join(__dirname, "..", "data.json");
 
 // Endpoint para recibir el webhook
 router.post("/", (req, res) => {
@@ -25,31 +25,32 @@ router.post("/", (req, res) => {
     // Verificar y decodificar el token JWT
     const decodedData = jwt.verify(jwtToken, JWT_SECRET);
 
-    // Guardar los datos decodificados en memoria
-    data.records.push(decodedData);
-
-    // Procesar el arreglo de eventos
-    const events = decodedData.events;
-
-    if (Array.isArray(events)) {
-      for (const event of events) {
-        const identity_process_id = event.object.identity_process_id;
-        const validation_status = event.object.validation_status;
-
-        // Buscar el usuario por identity_process_id
-        const userIndex = userData.users.findIndex(
-          (user) => user.identity_process_id === identity_process_id
-        );
-
-        if (userIndex !== -1) {
-          // Actualizar validation_status
-          userData.users[userIndex].validation_status = validation_status;
-          // Opcional: actualizar timestamp u otros campos si es necesario
+    // Leer datos existentes de data.json
+    let data = {};
+    if (fs.existsSync(dataFilePath)) {
+      const fileData = fs.readFileSync(dataFilePath, "utf8");
+      if (fileData.trim()) {
+        try {
+          data = JSON.parse(fileData);
+        } catch (parseError) {
+          console.error("Error al parsear data.json:", parseError);
+          data = {};
         }
       }
     }
 
-    res.status(200).send("Datos recibidos y procesados correctamente.");
+    // Asegurar que data.records sea un array
+    if (!Array.isArray(data.records)) {
+      data.records = [];
+    }
+
+    // Agregar los datos decodificados al array
+    data.records.push(decodedData);
+
+    // Guardar los datos actualizados en data.json
+    fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2));
+
+    res.status(200).send("Datos recibidos y almacenados correctamente.");
   } catch (error) {
     console.error("Error al procesar el webhook:", error);
 

@@ -7,8 +7,8 @@ const recordsRouter = require("./routes/records");
 const userRouter = require("./routes/user");
 
 // Middlewares
-app.use(express.text({ type: "application/jwt" }));
-app.use(express.json());
+app.use("/webhook", express.text({ type: "application/jwt" })); // Solo para /webhook
+app.use(express.json()); // Para los demás endpoints
 
 // Rutas
 app.use("/webhook", webhookRouter);
