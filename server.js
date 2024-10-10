@@ -1,13 +1,10 @@
-// server.js
-import express from "express";
-import dotenv from "dotenv";
-dotenv.config();
-
-import webhookRouter from "./routes/webhook.js";
-import recordsRouter from "./routes/records.js";
-import userRouter from "./routes/user.js";
-
+const express = require("express");
+require("dotenv").config();
 const app = express();
+
+const webhookRouter = require("./routes/webhook");
+const recordsRouter = require("./routes/records");
+const userRouter = require("./routes/user");
 
 // Middlewares
 app.use(express.text({ type: "application/jwt" }));

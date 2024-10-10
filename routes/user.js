@@ -1,16 +1,13 @@
-// routes/user.js
-import express from "express";
-import { JSONFile } from "lowdb/node";
-import { Low } from "lowdb";
-
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
 const router = express.Router();
 
-// Configurar lowdb para user_data.json
-const adapter = new JSONFile("user_data.json");
-const db = new Low(adapter);
+// Ruta del archivo user_data.json
+const userDataFilePath = path.join(__dirname, "..", "user_data.json");
 
 // Endpoint para recibir los datos del usuario (POST /user)
-router.post("/", async (req, res) => {
+router.post("/", (req, res) => {
   try {
     const { phone, identity_process_id, validation_status } = req.body;
 
@@ -26,8 +23,11 @@ router.post("/", async (req, res) => {
     const timestamp = new Date().toISOString();
 
     // Leer datos existentes
-    await db.read();
-    db.data = db.data || { users: [] };
+    let userData = { users: [] };
+    if (fs.existsSync(userDataFilePath)) {
+      const fileData = fs.readFileSync(userDataFilePath, "utf8");
+      userData = JSON.parse(fileData);
+    }
 
     // Crear nuevo objeto de usuario
     const newUser = {
@@ -38,10 +38,10 @@ router.post("/", async (req, res) => {
     };
 
     // Agregar nuevo usuario
-    db.data.users.push(newUser);
+    userData.users.push(newUser);
 
     // Guardar datos actualizados
-    await db.write();
+    fs.writeFileSync(userDataFilePath, JSON.stringify(userData, null, 2));
 
     res
       .status(200)
@@ -55,14 +55,17 @@ router.post("/", async (req, res) => {
 });
 
 // Endpoint para obtener los registros de usuarios (GET /user)
-router.get("/", async (req, res) => {
+router.get("/", (req, res) => {
   try {
     // Leer datos existentes
-    await db.read();
-    db.data = db.data || { users: [] };
+    let userData = { users: [] };
+    if (fs.existsSync(userDataFilePath)) {
+      const fileData = fs.readFileSync(userDataFilePath, "utf8");
+      userData = JSON.parse(fileData);
+    }
 
     // Devolver los usuarios almacenados
-    res.status(200).json(db.data.users);
+    res.status(200).json(userData.users);
   } catch (error) {
     console.error("Error al obtener los registros de usuarios:", error);
     res
@@ -71,4 +74,4 @@ router.get("/", async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;

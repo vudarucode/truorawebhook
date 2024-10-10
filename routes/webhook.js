@@ -1,18 +1,8 @@
-// routes/webhook.js
-import express from "express";
-import jwt from "jsonwebtoken";
-import { JSONFile } from "lowdb/node";
-import { Low } from "lowdb";
-
+const express = require("express");
+const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
 const router = express.Router();
-
-// Configurar lowdb para data.json
-const adapter = new JSONFile("data.json");
-const db = new Low(adapter);
-
-// Configurar lowdb para user_data.json
-const userAdapter = new JSONFile("user_data.json");
-const userDb = new Low(userAdapter);
 
 // Clave secreta para verificar el JWT
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -24,8 +14,12 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
+// Ruta de los archivos JSON
+const dataFilePath = path.join(__dirname, "..", "data.json");
+const userDataFilePath = path.join(__dirname, "..", "user_data.json");
+
 // Endpoint para recibir el webhook
-router.post("/", async (req, res) => {
+router.post("/", (req, res) => {
   try {
     const jwtToken = req.body;
 
@@ -33,37 +27,43 @@ router.post("/", async (req, res) => {
     const decodedData = jwt.verify(jwtToken, JWT_SECRET);
 
     // Guardar los datos decodificados en data.json
-    await db.read();
-    db.data = db.data || { records: [] };
-    db.data.records.push(decodedData);
-    await db.write();
+    let data = { records: [] };
+    if (fs.existsSync(dataFilePath)) {
+      const fileData = fs.readFileSync(dataFilePath, "utf8");
+      data = JSON.parse(fileData);
+    }
+    data.records.push(decodedData);
+    fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2));
 
     // Procesar el arreglo de eventos
     const events = decodedData.events;
 
     if (Array.isArray(events)) {
       // Leer datos de usuarios existentes
-      await userDb.read();
-      userDb.data = userDb.data || { users: [] };
+      let userData = { users: [] };
+      if (fs.existsSync(userDataFilePath)) {
+        const userFileData = fs.readFileSync(userDataFilePath, "utf8");
+        userData = JSON.parse(userFileData);
+      }
 
       for (const event of events) {
         const identity_process_id = event.object.identity_process_id;
         const validation_status = event.object.validation_status;
 
         // Buscar el usuario por identity_process_id
-        const userIndex = userDb.data.users.findIndex(
+        const userIndex = userData.users.findIndex(
           (user) => user.identity_process_id === identity_process_id
         );
 
         if (userIndex !== -1) {
           // Actualizar validation_status
-          userDb.data.users[userIndex].validation_status = validation_status;
+          userData.users[userIndex].validation_status = validation_status;
           // Opcional: actualizar timestamp u otros campos si es necesario
         }
       }
 
       // Guardar datos actualizados de usuarios
-      await userDb.write();
+      fs.writeFileSync(userDataFilePath, JSON.stringify(userData, null, 2));
     }
 
     res.status(200).send("Datos recibidos y procesados correctamente.");
@@ -80,4 +80,4 @@ router.post("/", async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;
