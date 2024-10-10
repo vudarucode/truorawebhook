@@ -40,7 +40,7 @@ app.post("/webhook", express.text({ type: "application/jwt" }), (req, res) => {
     // Escribir el array actualizado en data.json
     fs.writeFileSync("data.json", JSON.stringify(dataArray, null, 2));
 
-    // Procesar los eventos y actualizar el validation_status en user_data.json
+    // Procesar los eventos y agregar nuevos registros en user_data.json
     const events = decodedData.events;
 
     if (Array.isArray(events)) {
@@ -53,20 +53,21 @@ app.post("/webhook", express.text({ type: "application/jwt" }), (req, res) => {
         }
       }
 
-      // Actualizar validation_status para cada evento
+      // Agregar nuevos registros para cada evento
       events.forEach((event) => {
         const identity_process_id = event.object.identity_process_id;
         const validation_status = event.object.validation_status;
 
-        // Buscar el usuario con el identity_process_id
-        const userIndex = userDataArray.findIndex(
-          (user) => user.identity_process_id === identity_process_id
-        );
+        // Crear un nuevo registro de usuario con los datos del evento
+        const newUserRecord = {
+          identity_process_id: identity_process_id,
+          validation_status: validation_status,
+          timestamp: new Date().toISOString(),
+          source: "webhook",
+        };
 
-        if (userIndex !== -1) {
-          // Actualizar el validation_status del usuario
-          userDataArray[userIndex].validation_status = validation_status;
-        }
+        // Agregar el nuevo registro al array de usuarios
+        userDataArray.push(newUserRecord);
       });
 
       // Escribir el array actualizado en user_data.json
