@@ -1,36 +1,44 @@
-// routes/user.js
 const express = require("express");
-const fs = require("fs");
 const router = express.Router();
+const { JSONFile, Low } = require("lowdb");
 
-// Endpoint para recibir el ID del usuario y el objeto JSON, y guardarlo en un archivo JSON
-router.post("/", (req, res) => {
+// Configurar lowdb para user_data.json
+const adapter = new JSONFile("user_data.json");
+const db = new Low(adapter);
+
+// Endpoint para recibir los datos del usuario (POST /user)
+router.post("/", async (req, res) => {
   try {
-    const { userId, data } = req.body;
+    const { phone, identity_process_id, validation_status } = req.body;
 
-    if (!userId || !data) {
+    if (!phone || !identity_process_id || !validation_status) {
       return res
         .status(400)
         .send(
-          'El campo "userId" y "data" son requeridos en el cuerpo de la solicitud.'
+          'Los campos "phone", "identity_process_id" y "validation_status" son requeridos.'
         );
     }
 
-    // Nombre del archivo donde se almacenarán los datos (puedes cambiarlo si lo deseas)
-    const fileName = "user_data.json";
+    // Agregar timestamp del lado del servidor
+    const timestamp = new Date().toISOString();
 
-    // Leer los datos existentes
-    let userDataArray = [];
-    if (fs.existsSync(fileName)) {
-      const existingData = fs.readFileSync(fileName, "utf8");
-      userDataArray = JSON.parse(existingData);
-    }
+    // Leer datos existentes
+    await db.read();
+    db.data = db.data || { users: [] };
 
-    // Agregar los nuevos datos
-    userDataArray.push({ userId, data });
+    // Crear nuevo objeto de usuario
+    const newUser = {
+      phone,
+      identity_process_id,
+      validation_status,
+      timestamp,
+    };
 
-    // Escribir los datos actualizados en el archivo
-    fs.writeFileSync(fileName, JSON.stringify(userDataArray, null, 2));
+    // Agregar nuevo usuario
+    db.data.users.push(newUser);
+
+    // Guardar datos actualizados
+    await db.write();
 
     res
       .status(200)
@@ -40,6 +48,23 @@ router.post("/", (req, res) => {
     res
       .status(500)
       .send("Error en el servidor al procesar los datos del usuario.");
+  }
+});
+
+// Nuevo endpoint para obtener los registros de usuarios (GET /user)
+router.get("/", async (req, res) => {
+  try {
+    // Leer datos existentes
+    await db.read();
+    db.data = db.data || { users: [] };
+
+    // Devolver los usuarios almacenados
+    res.status(200).json(db.data.users);
+  } catch (error) {
+    console.error("Error al obtener los registros de usuarios:", error);
+    res
+      .status(500)
+      .send("Error en el servidor al obtener los registros de usuarios.");
   }
 });
 
