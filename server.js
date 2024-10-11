@@ -175,6 +175,50 @@ app.get("/user", (req, res) => {
   }
 });
 
+// **Nuevo endpoint para obtener el registro más reciente por número de teléfono**
+app.post("/user/last", (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res
+        .status(400)
+        .send('El campo "phone" es requerido en el cuerpo de la solicitud.');
+    }
+
+    if (fs.existsSync("user_data.json")) {
+      const data = fs.readFileSync("user_data.json", "utf8");
+      const userDataArray = JSON.parse(data);
+
+      // Filtrar los registros que coinciden con el número de teléfono
+      const userRecords = userDataArray.filter((user) => user.phone === phone);
+
+      if (userRecords.length === 0) {
+        return res
+          .status(404)
+          .send(
+            "No se encontraron registros para el número de teléfono proporcionado."
+          );
+      }
+
+      // Ordenar los registros por timestamp descendente
+      userRecords.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      // Obtener el registro más reciente
+      const latestRecord = userRecords[0];
+
+      res.status(200).json(latestRecord);
+    } else {
+      res.status(404).send("No se encontraron registros de usuarios.");
+    }
+  } catch (error) {
+    console.error("Error al consultar el registro más reciente:", error);
+    res
+      .status(500)
+      .send("Error en el servidor al consultar el registro más reciente.");
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
